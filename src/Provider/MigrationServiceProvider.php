@@ -4,20 +4,19 @@ namespace Dbtlr\MigrationProvider\Provider;
 
 use Doctrine\DBAL\Migrations\Configuration\Configuration;
 use Doctrine\DBAL\Migrations\Tools\Console\Command;
-use Doctrine\ORM\Tools\Console\Helper\EntityManagerHelper;
-use Silex\ServiceProviderInterface;
+use Pimple\Container;
+use Pimple\ServiceProviderInterface;
 use Silex\Application;
 use Knp\Console\ConsoleEvents;
 use Knp\Console\ConsoleEvent;
-use Symfony\Component\Console\Helper\DialogHelper;
-use Symfony\Component\Console\Helper\HelperSet;
+use Symfony\Component\Console\Helper\QuestionHelper;
 
 class MigrationServiceProvider implements ServiceProviderInterface
 {
     /**
-     * @param Application $app
+     * @param Container $app
      */
-    public function register(Application $app)
+    public function register(Container $app)
     {
         $app['db.migrations.namespace'] = 'DoctrineMigrations';
         $app['db.migrations.path'] = null;
@@ -27,13 +26,12 @@ class MigrationServiceProvider implements ServiceProviderInterface
         $app['dispatcher']->addListener(ConsoleEvents::INIT, function (ConsoleEvent $event) use ($app) {
             $application = $event->getApplication();
 
-            $helpers = array('dialog' => new DialogHelper());
-
             if (isset($app['orm.em'])) {
-                $helpers['em'] = new EntityManagerHelper($app['orm.em']);
+                $helperSet = \Doctrine\ORM\Tools\Console\ConsoleRunner::createHelperSet($app['orm.em']);
+            } else {
+                $helperSet = \Doctrine\DBAL\Tools\Console\ConsoleRunner::createHelperSet($app['db']);
             }
-
-            $helperSet = new HelperSet($helpers);
+            $helperSet->set(new QuestionHelper(), 'question');
 
             $application->setHelperSet($helperSet);
 
